@@ -84,9 +84,11 @@ if [ "${PACKAGES_ALREADY_INSTALLED}" != "true" ]; then
         unzip \
         zip \
         nano \
+        cmake \
         vim-tiny \
         less \
         jq \
+        libfontconfig1-dev \
         lsb-release \
         apt-transport-https \
         dialog \
