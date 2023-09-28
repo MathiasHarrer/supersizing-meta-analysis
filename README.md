@@ -7,6 +7,8 @@ It includes [`R`](https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r
 It comes with `renv` setup which includes `languageserver` package required to enable the latter extension.
 To install it, open R in Codespaces console and type `renv::restore()`.
 
+<img src="docs/img/codespaces.png" width="300">
+
 ## Adjusting configuration to your needs
 
 ### Different R version

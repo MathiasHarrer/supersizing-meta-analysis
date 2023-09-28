@@ -1,3 +1,7 @@
 library(meta)
 library(metapsyTools)
 library(metafor)
+library(languageserver)
+library(lintr)
+library(styler)
+library(jsonlite)
