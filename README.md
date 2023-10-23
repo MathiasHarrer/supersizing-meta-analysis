@@ -1,4 +1,4 @@
-# Features and Findings of the Metapsy Meta-Analytic Research Domain: Reproducible Code Repository
+# Features and Findings of the "Metapsy" Meta-Analytic Research Domain: Reproducible Code Repository
 
 [![DOI](https://zenodo.org/badge/697726915.svg)](https://zenodo.org/doi/10.5281/zenodo.8414530)
 
