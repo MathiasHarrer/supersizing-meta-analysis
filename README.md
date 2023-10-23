@@ -8,7 +8,7 @@ Research Domain for Psychological Treatments".
 - The results of all analyses are saved in the `results` folder.
 - The main file used to conducted the meta-analyses is `02-meta-analysis.R` at the base of the repository.
 
-
+<br>
 
 ## 🕹 Open As a Virtual Environment
 
