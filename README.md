@@ -1,7 +1,10 @@
 # Features and Findings of the Metapsy Meta-Analytic Research Domain: Reproducible Code Repository
 
-This repository contains the data and analysis code for the manuscript "Features and Findings of the Metapsy Meta-Analytic
-Research Domain for Psychological Treatments". All datasets used to generate the analyses and plots can be found in the `data` folder. The results of all analyses are saved in the `results` folder. The main file used to conducted the meta-analyses is `02-meta-analysis.R` at the base of the repository.
+- This repository contains the data and analysis code for the manuscript "Features and Findings of the Metapsy Meta-Analytic
+Research Domain for Psychological Treatments".
+- All datasets used to generate the analyses and plots can be found in the `data` folder.
+- The results of all analyses are saved in the `results` folder.
+- The main file used to conducted the meta-analyses is `02-meta-analysis.R` at the base of the repository.
 
 
 
