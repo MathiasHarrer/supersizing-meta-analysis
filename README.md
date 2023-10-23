@@ -1,5 +1,4 @@
-<a href="https://www.metapsy.org" target="_blank"><img src="https://www.metapsy.org/assets/hexagon2.png" class="cover" width="150" align="right"/></a>
-# Features and Findings of the "Metapsy" Meta-Analytic Research Domain: Reproducible Code Repository
+# <a href="https://www.metapsy.org" target="_blank"><img src="https://www.metapsy.org/assets/hexagon2.png" class="cover" width="150" align="right"/></a> Features and Findings of the "Metapsy" Meta-Analytic Research Domain: Reproducible Code Repository
 
 [![DOI](https://zenodo.org/badge/697726915.svg)](https://zenodo.org/doi/10.5281/zenodo.8414530)
 
