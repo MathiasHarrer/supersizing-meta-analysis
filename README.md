@@ -34,7 +34,7 @@ This opens an R session in your environment.
 
 <br>
 
-2. Next, restore the R environment by running `renv::restore()` in the Console. Please note that this takes about 5 minutes to complete!
+2. Next, restore the R environment by running `renv::restore()` in the Console. Please note that this takes about 10-15 minutes to complete!
 
 <center><img src="docs/img/s2.png" width="400"></center>
 
