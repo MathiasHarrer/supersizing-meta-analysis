@@ -1,14 +1,37 @@
-library(xlsx)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(forcats)
-library(paletteer)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                                             #
+#  FEATURES AND FINDINGS OF THE METAPSY META-ANALYTIC RESEARCH DOMAIN         #
+#  FOR PSYCHOLOGICAL TREATMENTS                                               #
+#                                                                             #
+#  I. Publications In PsycInfo ----                                                     
+#                                                                             #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+## 0. Load dependencies & load data -------------------------------------------
+
 library(cowplot)
+library(dplyr)
+library(forcats)
+library(ggplot2)
+library(jsonlite)
+library(languageserver)
+library(lintr)
+library(meta)
+library(metafor)
+library(metapsyTools)
+library(paletteer)
+library(styler)
+library(tidyverse)
+library(readxl)
 
-dat = read.xlsx("data/publications.xlsx", sheetIndex = 1)
-dat.rev = read.xlsx("data/publications.xlsx", sheetIndex = 2)
+dat = read_excel("data/00-publications.xlsx", sheet = 1)
+dat.rev = read_excel("data/00-publications.xlsx", sheet = 2)
 
+
+## 1. Generate Plots -------------------------------------------------------
+
+## 1.1 Newly published articles --------------------------------------------
 
 dat %>% 
   pivot_longer(-year, names_to = "group", values_to = "publications") %>% 
@@ -16,11 +39,14 @@ dat %>%
     group = recode(
       group, "overall" = "Overall",
         "psychometrics_methodology" = "Psychometrics & Methodology",
-        "experimental_psychology_neuroscience" = "Experimental Psychology & Neuroscience",
+        "experimental_psychology_neuroscience" = 
+        "Experimental Psychology & Neuroscience",
         "social_psychology" = "Social Psychology",
         "clinical_health_psychology" = "Clinical & Health Psychology",
-        "child_educational_psychology" = "Developmental & Educational Psychology",
-        "organizational_psychology_human_factors" = "Organizational Psychology & Human Factors"),
+        "child_educational_psychology" = 
+        "Developmental & Educational Psychology",
+        "organizational_psychology_human_factors" = 
+        "Organizational Psychology & Human Factors"),
     group = fct_reorder(group, -publications, function(x) x[length(x)])
     ) %>% 
   arrange(year) %>% 
@@ -31,28 +57,40 @@ dat %>%
   scale_colour_paletteer_d("ggsci::nrc_npg") +
   xlab("") + ylab("") + ggtitle("Newly Published") + 
   theme(legend.position = "none",
-        text=element_text(family="Roboto Slab"),
         plot.title = element_text(hjust = 1, size=9)) -> plt1
 
 
+## 1.2 Available articles --------------------------------------------
+
 dat %>% 
   mutate(overall = cumsum(overall),
-         psychometrics_methodology = cumsum(psychometrics_methodology),
-         experimental_psychology_neuroscience = cumsum(experimental_psychology_neuroscience),
-         social_psychology = cumsum(social_psychology),
-         clinical_health_psychology = cumsum(clinical_health_psychology),
-         child_educational_psychology = cumsum(child_educational_psychology),
-         organizational_psychology_human_factors = cumsum(organizational_psychology_human_factors)) %>% 
-  pivot_longer(-year, names_to = "group", values_to = "publications") %>% 
+         psychometrics_methodology = 
+          cumsum(psychometrics_methodology),
+         experimental_psychology_neuroscience = 
+          cumsum(experimental_psychology_neuroscience),
+         social_psychology = 
+          cumsum(social_psychology),
+         clinical_health_psychology = 
+          cumsum(clinical_health_psychology),
+         child_educational_psychology = 
+          cumsum(child_educational_psychology),
+         organizational_psychology_human_factors = 
+          cumsum(organizational_psychology_human_factors)) %>% 
+  pivot_longer(-year, names_to = "group", 
+               values_to = "publications") %>% 
   mutate(
     group = recode(
       group, "overall" = "Overall",
       "psychometrics_methodology" = "Psychometrics & Methodology",
-      "experimental_psychology_neuroscience" = "Experimental Psychology & Neuroscience",
+      "experimental_psychology_neuroscience" = 
+      "Experimental Psychology & Neuroscience",
       "social_psychology" = "Social Psychology",
-      "clinical_health_psychology" = "Clinical & Health Psychology",
-      "child_educational_psychology" = "Developmental & Educational Psychology",
-      "organizational_psychology_human_factors" = "Organizational Psychology & Human Factors"),
+      "clinical_health_psychology" = 
+      "Clinical & Health Psychology",
+      "child_educational_psychology" = 
+      "Developmental & Educational Psychology",
+      "organizational_psychology_human_factors" = 
+      "Organizational Psychology & Human Factors"),
     group = fct_reorder(group, -publications, function(x) x[length(x)])
   ) %>% 
   arrange(year) %>% 
@@ -63,12 +101,14 @@ dat %>%
   scale_colour_paletteer_d("ggsci::nrc_npg") +
   xlab("") + ylab("") + ggtitle("Available") + 
   theme(legend.title = element_blank(),
-        text=element_text(family="Roboto Slab"),
         plot.title = element_text(hjust = 1, size=9)) -> plt2
 
 
+## 1.3 Published reviews --------------------------------------------
+
 dat.rev %>% 
-  pivot_longer(-year, names_to = "group", values_to = "publications") %>% 
+  pivot_longer(-year, names_to = "group", 
+               values_to = "publications") %>% 
   mutate(
     group = recode(
       group, "overall" = "Overall",
@@ -89,28 +129,42 @@ dat.rev %>%
   scale_colour_paletteer_d("ggsci::nrc_npg") +
   xlab("") + ylab("") + ggtitle("Newly Published") + 
   theme(legend.position = "none",
-        text=element_text(family="Roboto Slab"),
         plot.title = element_text(hjust = 1, size=9)) -> plt1.rev
 
 
+## 1.4 Available reviews --------------------------------------------
+
 dat.rev %>% 
-  mutate(overall = cumsum(overall),
-         psychometrics_methodology = cumsum(psychometrics_methodology),
-         experimental_psychology_neuroscience = cumsum(experimental_psychology_neuroscience),
-         social_psychology = cumsum(social_psychology),
-         clinical_health_psychology = cumsum(clinical_health_psychology),
-         child_educational_psychology = cumsum(child_educational_psychology),
-         organizational_psychology_human_factors = cumsum(organizational_psychology_human_factors)) %>% 
-  pivot_longer(-year, names_to = "group", values_to = "publications") %>% 
+  mutate(overall = 
+          cumsum(overall),
+         psychometrics_methodology = 
+          cumsum(psychometrics_methodology),
+         experimental_psychology_neuroscience = 
+          cumsum(experimental_psychology_neuroscience),
+         social_psychology = 
+          cumsum(social_psychology),
+         clinical_health_psychology = 
+          cumsum(clinical_health_psychology),
+         child_educational_psychology = 
+          cumsum(child_educational_psychology),
+         organizational_psychology_human_factors = 
+          cumsum(organizational_psychology_human_factors)) %>% 
+  pivot_longer(-year, names_to = "group", 
+               values_to = "publications") %>% 
   mutate(
     group = recode(
       group, "overall" = "Overall",
-      "psychometrics_methodology" = "Psychometrics & Methodology",
-      "experimental_psychology_neuroscience" = "Experimental Psychology & Neuroscience",
+      "psychometrics_methodology" = 
+        "Psychometrics & Methodology",
+      "experimental_psychology_neuroscience" = 
+        "Experimental Psychology & Neuroscience",
       "social_psychology" = "Social Psychology",
-      "clinical_health_psychology" = "Clinical & Health Psychology",
-      "child_educational_psychology" = "Developmental & Educational Psychology",
-      "organizational_psychology_human_factors" = "Organizational Psychology & Human Factors"),
+      "clinical_health_psychology" = 
+        "Clinical & Health Psychology",
+      "child_educational_psychology" = 
+        "Developmental & Educational Psychology",
+      "organizational_psychology_human_factors" = 
+        "Organizational Psychology & Human Factors"),
     group = fct_reorder(group, -publications, function(x) x[length(x)])
   ) %>% 
   arrange(year) %>% 
@@ -121,12 +175,13 @@ dat.rev %>%
   scale_colour_paletteer_d("ggsci::nrc_npg") +
   xlab("") + ylab("") + ggtitle("Available") + 
   theme(legend.title = element_blank(),
-        text=element_text(family="Roboto Slab"),
         plot.title = element_text(hjust = 1, size=9)) -> plt2.rev
 
 
+## 1.5 Arrange plots and save ----------------------------------------
+
 plot_grid(plt1, plt2, plt1.rev, plt2.rev,
-          rel_widths = c(1.25,2), label_fontfamily = "Roboto Slab",
+          rel_widths = c(1.25,2), 
           labels = c("Articles", NA, "Reviews", NA),
           hjust = -0.25) -> grob
 

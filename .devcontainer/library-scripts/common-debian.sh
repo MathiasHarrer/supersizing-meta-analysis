@@ -94,6 +94,12 @@ if [ "${PACKAGES_ALREADY_INSTALLED}" != "true" ]; then
         dialog \
         libc6 \
         libgcc1 \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
         libgssapi-krb5-2 \
         libicu[0-9][0-9] \
         liblttng-ust0 \
