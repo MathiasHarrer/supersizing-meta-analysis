@@ -1,5 +1,7 @@
 # Features and Findings of the Metapsy Meta-Analytic Research Domain: Reproducible Code Repository
 
+[![DOI](https://zenodo.org/badge/697726915.svg)](https://zenodo.org/doi/10.5281/zenodo.8414530)
+
 - This repository contains the data and analysis code for the manuscript "Features and Findings of the Metapsy Meta-Analytic
 Research Domain for Psychological Treatments".
 - All datasets used to generate the analyses and plots can be found in the `data` folder.
