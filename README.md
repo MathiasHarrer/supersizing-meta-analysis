@@ -19,7 +19,7 @@ used to open the repository as a fully reproducible virtual environment, running
 
 The virtual environment can be initialized with [Github Codespaces](https://github.com/features/codespaces). Please note that this requires you to be **logged in** with your personal **Github account**. 
 
-Click on the **Code** button; in the dropdown, open **Codespaces**. Then, click on the button **Create codespace on master**. This starts the setup of you virtual environment. Please note that the setup takes between 5-10 minutes.
+Click on the **Code** button; in the dropdown, open **Codespaces**. Then, click on the button **Create codespace on master**. This starts the setup of your virtual environment. Please note that the setup takes between 5-10 minutes.
 
 
 <img src="docs/img/codespaces.png" width="250">
