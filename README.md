@@ -10,7 +10,7 @@ Research Domain for Psychological Treatments".
 
 
 
-## Open As a Virtual Environment
+## 🕹 Open As a Virtual Environment
 
 This repository contains a [`renv`](https://rstudio.github.io/renv/index.html) lockfile and Docker container. This can be
 used to open the repository as a fully reproducible virtual environment, running with R version 4.1.2 on a Linux image.
@@ -50,5 +50,5 @@ This opens an R session in your environment.
 
 <br>
 
-For questions or problems with the environment, please contact
+> For questions or problems with the environment, please contact
 Mathias Harrer (mathias.harrer@tum.de).
