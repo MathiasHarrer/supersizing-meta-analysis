@@ -17,6 +17,7 @@ cially published (2023-11-13):
 - social anxiety disorder (`sad.csv`)
 
 As of now, running code chunks that rely on these
-datasets will return an error. In the meantime,
-these two datasets are available upon reasonable
-request (contact: mathias.harrer@tum.de).
+datasets will return an error. Until their offi-
+cial release, these two datasets are available 
+upon reasonable request 
+(contact: mathias.harrer@tum.de).
