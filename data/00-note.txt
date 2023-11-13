@@ -14,7 +14,7 @@ but will be added here as soon as they are offi-
 cially published (2023-11-13):
 
 - prolonged grief disorder (`grief.csv`)
-- social anxiety disorder (`sad.csv`)
+- social anxiety disorder (`social_anxiety.csv`)
 
 As of now, running code chunks that rely on these
 datasets will return an error. Until their offi-
