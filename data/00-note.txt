@@ -8,3 +8,10 @@ at to www.metapsy.org.
 
 Databases have been prefiltered to fit the PICO
 of the specific analysis.
+
+The following databases are currently not included
+but will be added here as soon as they are offi-
+cially published (2023-11-13):
+
+- prolonged grief disorder (`grief.csv`)
+- social anxiety disorder (`sad.csv`)
