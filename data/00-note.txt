@@ -4,7 +4,7 @@ this folder are pre-final versions that have not
 been fully transformed into the Metapsy data
 standard. Some of the variable names and coding may 
 therefore differ in the released versions provided 
-at to www.metapsy.org.
+at www.metapsy.org.
 
 Databases have been prefiltered to fit the PICO
 of the specific analysis.
