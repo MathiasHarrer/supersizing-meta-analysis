@@ -774,7 +774,7 @@ dat.forest[4,"pi"] = "[-0.18; 1.90]"
 dat.forest[12,"pi"] = "[-0.52; 1.20]"
 
 # Generate plot
-png("results/forest.png", res=800, width=8550, height=2800)
+png("results/plots/forest.png", res=800, width=8550, height=2800)
 meta::metagen(.TE, .seTE, data = dat.forest) %>% 
   meta::forest.meta(
     sortvar = TE, 
