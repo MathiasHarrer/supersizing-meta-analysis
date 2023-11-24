@@ -10,20 +10,9 @@
 
 ## 0. Load dependencies and define models to be run ----------------------------
 
-library(cowplot)
-library(dplyr)
-library(forcats)
-library(ggplot2)
-library(jsonlite)
-library(languageserver)
-library(lintr)
-library(meta)
-library(metafor)
-library(metapsyTools)
-library(paletteer)
-library(styler)
 library(tidyverse)
-library(writexl)
+library(xlsx)
+library(metapsyTools)
 source("utils/utils.R")
 
 modelList = c("threelevel.che", "combined", "outliers",
@@ -43,13 +32,20 @@ dat.dep = read.csv("data/depression.csv") %>% filter(format != "ush")
 m.dep = runMetaAnalysis(dat.dep, which.run = modelList,
                         which.outliers = "combined", 
                         which.influence = "combined",
-                        which.rob = "combined", 
-                        low.rob.filter = "rob > 3",
+                        which.rob = "combined", low.rob.filter = "rob > 3",
                         nnt.cer = .18) %>% 
           correctPublicationBias(which.run = "combined")
 
 # Save the model & results
 save(m.dep, file="results/depression/m.dep.rda")
+write.xlsx(m.dep$summary, file = "results/depression/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.dep$model.threelevel.che.var.comp, 
+           file = "results/depression/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.dep$correctPublicationBias$summary, 
+           file = "results/depression/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/depression/profile_che_model.pdf")
@@ -72,96 +68,18 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.dep.sg
 
+# Save the results
+write.xlsx(m.dep.sg, file = "results/depression/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.1.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.dep.sum = m.dep$model.combined$data
-with(dat.dep.sum, {cbind(n_arm1, n_change_arm1, n_change_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.dep.sum$n1
-with(dat.dep.sum, {cbind(n_arm2, n_change_arm2, n_change_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.dep.sum$n2
-dat.dep.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
+#### 1.1.3 Study References ----------------------------------------------------
 
-# Number of studies
-dat.dep %>% {unique(.$study) %>% length()} -> k
+dat.dep %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/depression/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-# Number of unique comparisons
-m.dep$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.dep$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.dep.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin"),
-         perc.clin = sum(.$recruitment == "clin")/nrow(.))} -> recr.clin
-
-# Mean age
-dat.dep.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.dep.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.dep.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.dep.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.dep.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 3, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-  
-# Intervention format
-dat.dep.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.dep.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_arm1) %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-dep.list = list(
-  "pooled_effects" = m.dep$summary,
-  "variance_components" = m.dep$model.threelevel.che.var.comp,
-  "publication_bias" = m.dep$correctPublicationBias$summary,
-  "subgroup_analysis" = m.dep.sg,
-  "characteristics" = characteristics %>% as.data.frame,
-  "references" = dat.dep.sum %>% 
-     distinct(study, .keep_all = T) %>% 
-     select(full_ref))
-
-write_xlsx(dep.list, path="results/depression/results.xlsx")
 
 
 
@@ -170,18 +88,26 @@ write_xlsx(dep.list, path="results/depression/results.xlsx")
 #### 1.2.1 Pooled Effect -------------------------------------------------------
 
 # Load data
-dat.sad = read.csv("data/social_anxiety.csv") %>% filter(format != "ush")
+dat.sad = read.csv("data/social_anxiety.csv")
 
 # Run meta-analysis and correct publication bias
 m.sad = runMetaAnalysis(dat.sad, which.run = modelList,
                         which.outliers = "combined", 
                         which.influence = "combined",
-                        which.rob = "combined", low.rob.filter = "rob > 3",
+                        which.rob = "combined", low.rob.filter = "rob == 3",
                         nnt.cer = .11) %>% 
   correctPublicationBias(which.run = "combined")
 
 # Save the model & results
 save(m.sad, file="results/social_anxiety/m.sad.rda")
+write.xlsx(m.sad$summary, file = "results/social_anxiety/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.sad$model.threelevel.che.var.comp, 
+           file = "results/social_anxiety/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.sad$correctPublicationBias$summary, 
+           file = "results/social_anxiety/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/social_anxiety/profile_che_model.pdf")
@@ -210,94 +136,18 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.sad.sg
 
+# Save the results
+write.xlsx(m.sad.sg, file = "results/social_anxiety/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.2.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.sad.sum = m.sad$model.combined$data
-with(dat.sad.sum, {cbind(n_arm1, n_change_arm1, n_change_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.sad.sum$n1
-with(dat.sad.sum, {cbind(n_arm2, n_change_arm2, n_change_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.sad.sum$n2
-dat.sad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
+#### 1.2.3 Study References ----------------------------------------------------
 
-# Number of studies
-dat.sad %>% {unique(.$study) %>% length()} -> k
+dat.sad %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/social_anxiety/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-# Number of unique comparisons
-m.sad$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.sad$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.sad.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin"),
-         perc.clin = sum(.$recruitment == "clin")/nrow(.))} -> recr.clin
-
-# Mean age
-dat.sad.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.sad.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.sad.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.sad.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.sad.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 3, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.sad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.sad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_arm1) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-sad.list = list(
-  "pooled_effects" = m.sad$summary,
-  "variance_components" = m.sad$model.threelevel.che.var.comp,
-  "publication_bias" = m.sad$correctPublicationBias$summary,
-  "subgroup_analysis" = m.sad.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(sad.list, path="results/social_anxiety/results.xlsx")
 
 
 
@@ -319,6 +169,14 @@ m.pan = runMetaAnalysis(dat.pan, which.run = modelList,
 
 # Save the model & results
 save(m.pan, file="results/panic/m.pan.rda")
+write.xlsx(m.pan$summary, file = "results/panic/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.pan$model.threelevel.che.var.comp, 
+           file = "results/panic/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.pan$correctPublicationBias$summary, 
+           file = "results/panic/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/panic/profile_che_model.pdf")
@@ -341,99 +199,18 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.pan.sg
 
+# Save the results
+write.xlsx(m.pan.sg, file = "results/panic/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.3.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.pan.sum = m.pan$model.combined$data
-with(dat.pan.sum, {cbind(n_arm1, n_change_arm1, n_change_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.pan.sum$n1
-with(dat.pan.sum, {cbind(n_arm2, n_change_arm2, n_change_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.pan.sum$n2
-dat.pan.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.pan %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.pan$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.pan$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.pan.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clinical", na.rm=T),
-         perc.clin = sum(.$recruitment == "clinical", na.rm=T)/nrow(.))
-    } -> recr.clin
-
-# Mean age
-dat.pan.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.pan.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.pan.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.pan.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.pan.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.pan.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.pan.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
+#### 1.3.3 Study References ----------------------------------------------------
 
 # Save full references of included studies
-# Save results
-pan.list = list(
-  "pooled_effects" = m.pan$summary,
-  "variance_components" = m.pan$model.threelevel.che.var.comp,
-  "publication_bias" = m.pan$correctPublicationBias$summary,
-  "subgroup_analysis" = m.pan.sg,
-  "characteristics" = characteristics %>% as.data.frame,
-  "references" = dat.pan.sum %>% 
-     distinct(study, .keep_all = T) %>% 
-     select(full_ref))
-
-write_xlsx(pan.list, path="results/panic/results.xlsx")
+dat.pan %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/panic/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
 
 
@@ -454,6 +231,14 @@ m.gad = runMetaAnalysis(dat.gad, which.run = modelList,
 
 # Save the model & results
 save(m.gad, file="results/generalized_anxiety/m.gad.rda")
+write.xlsx(m.gad$summary, file = "results/generalized_anxiety/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.gad$model.threelevel.che.var.comp, 
+           file = "results/generalized_anxiety/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.gad$correctPublicationBias$summary, 
+           file = "results/generalized_anxiety/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/generalized_anxiety/profile_che_model.pdf")
@@ -476,98 +261,18 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.gad.sg
 
+# Save the results
+write.xlsx(m.gad.sg, file = "results/generalized_anxiety/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.4.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.gad.sum = m.gad$model.combined$data
+#### 1.4.3 Study References ----------------------------------------------------
 
-with(dat.gad.sum, {cbind(n_arm1, totaln_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.gad.sum$n1
-
-with(dat.gad.sum, {cbind(n_arm2, totaln_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.gad.sum$n2
-
-dat.gad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.gad %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.gad$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.gad$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.gad.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin", na.rm=T),
-         perc.clin = sum(.$recruitment == "clin", na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.gad.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.gad.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.gad.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.gad.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.gad.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.gad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.gad.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_ig) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-gad.list = list(
-  "pooled_effects" = m.gad$summary,
-  "variance_components" = m.gad$model.threelevel.che.var.comp,
-  "publication_bias" = m.gad$correctPublicationBias$summary,
-  "subgroup_analysis" = m.gad.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(gad.list, path="results/generalized_anxiety/results.xlsx")
+# Save full references of included studies
+dat.gad %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/generalized_anxiety/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
 
 
@@ -577,7 +282,8 @@ write_xlsx(gad.list, path="results/generalized_anxiety/results.xlsx")
 
 # Load data
 dat.ocd = read.csv("data/ocd.csv") %>% 
-  filter(target_group %in% c("adul", "oth", "ppd"))
+  filter(time == "post", format != "ush", 
+         target_group %in% c("adul", "ppd", "oth"))
 
 # Run meta-analysis and correct publication bias
 m.ocd = runMetaAnalysis(dat.ocd, which.run = modelList,
@@ -589,6 +295,14 @@ m.ocd = runMetaAnalysis(dat.ocd, which.run = modelList,
 
 # Save the model & results
 save(m.ocd, file="results/ocd/m.ocd.rda")
+write.xlsx(m.ocd$summary, file = "results/ocd/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.ocd$model.threelevel.che.var.comp, 
+           file = "results/ocd/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.ocd$correctPublicationBias$summary, 
+           file = "results/ocd/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/ocd/profile_che_model.pdf")
@@ -606,105 +320,24 @@ rbind(
     {.$summary$control = "wl"; .$summary},
   dat.ocd %>% 
     filterPoolingData(
-      condition_arm2 %in% c("cau", "no treatment", "psychological placebo")) %>% 
+      condition_arm2 %in% c("cau")) %>% 
     runMetaAnalysis(which.run = "combined", nnt.cer = .05) %>% 
     subgroupAnalysis(condition_arm1) %>% 
     {.$summary$control = "cau"; .$summary}
 ) -> m.ocd.sg
 
+# Save the results
+write.xlsx(m.ocd.sg, file = "results/ocd/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.5.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.ocd.sum = m.ocd$model.combined$data
+#### 1.5.3 Study References ----------------------------------------------------
 
-with(dat.ocd.sum, {cbind(n_arm1, totaln_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.ocd.sum$n1
+dat.ocd %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/ocd/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-with(dat.ocd.sum, {cbind(n_arm2, totaln_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.ocd.sum$n2
-
-dat.ocd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.ocd %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.ocd$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.ocd$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.ocd.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin", na.rm=T),
-         perc.clin = sum(.$recruitment == "clin", na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.ocd.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.ocd.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.ocd.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl", `no treatment` = "cau", 
-         `psychological placebo` = "cau") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.ocd.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.ocd.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. < 2, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.ocd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.ocd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_arm1) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-ocd.list = list(
-  "pooled_effects" = m.ocd$summary,
-  "variance_components" = m.ocd$model.threelevel.che.var.comp,
-  "publication_bias" = m.ocd$correctPublicationBias$summary,
-  "subgroup_analysis" = m.ocd.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(ocd.list, path="results/ocd/results.xlsx")
 
 
 ### 1.6 Specific Phobia --------------------------------------------------------
@@ -724,6 +357,14 @@ m.pho = runMetaAnalysis(dat.pho, which.run = modelList,
 
 # Save the model & results
 save(m.pho, file="results/phobia/m.pho.rda")
+write.xlsx(m.pho$summary, file = "results/phobia/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.pho$model.threelevel.che.var.comp, 
+           file = "results/phobia/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.pho$correctPublicationBias$summary, 
+           file = "results/phobia/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/phobia/profile_che_model.pdf")
@@ -747,99 +388,17 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.pho.sg
 
+# Save the results
+write.xlsx(m.pho.sg, file = "results/phobia/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.6.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.pho.sum = m.pho$model.combined$data
+#### 1.6.3 Study References ----------------------------------------------------
 
-with(dat.pho.sum, {cbind(n_arm1, n_change_arm1, totaln_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.pho.sum$n1
-
-with(dat.pho.sum, {cbind(n_arm2, n_change_arm2, totaln_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.pho.sum$n2
-
-dat.pho.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.pho %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.pho$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.pho$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.pho.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin", na.rm=T),
-         perc.clin = sum(.$recruitment == "clin", na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.pho.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.pho.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.pho.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  recode(`wlc` = "wl", `no treatment` = "cau", 
-         `psychological placebo` = "cau") %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.pho.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.pho.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 2, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.pho.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.pho.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_ig) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-pho.list = list(
-  "pooled_effects" = m.pho$summary,
-  "variance_components" = m.pho$model.threelevel.che.var.comp,
-  "publication_bias" = m.pho$correctPublicationBias$summary,
-  "subgroup_analysis" = m.pho.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(pho.list, path="results/phobia/results.xlsx")
+dat.pho %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/phobia/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
 
 ### 1.7 Borderline Personality Disorder ----------------------------------------
@@ -859,6 +418,14 @@ m.bpd = runMetaAnalysis(dat.bpd, which.run = modelList,
 
 # Save the model & results
 save(m.bpd, file="results/borderline/m.bpd.rda")
+write.xlsx(m.bpd$summary, file = "results/borderline/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.bpd$model.threelevel.che.var.comp, 
+           file = "results/borderline/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.bpd$correctPublicationBias$summary, 
+           file = "results/borderline/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/borderline/profile_che_model.pdf")
@@ -877,97 +444,16 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.bpd.sg
 
+# Save the results
+write.xlsx(m.bpd.sg, file = "results/borderline/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.7.3 Study Characteristics -----------------------------------------------
+#### 1.7.3 Study References ----------------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.bpd.sum = m.bpd$model.combined$data
-
-with(dat.bpd.sum, {cbind(n_arm1, n_change_arm1, totaln_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.bpd.sum$n1
-
-with(dat.bpd.sum, {cbind(n_arm2, n_change_arm2, totaln_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.bpd.sum$n2
-
-dat.bpd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.bpd %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.bpd$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.bpd$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.bpd.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recruitment == "clin", na.rm=T),
-         perc.clin = sum(.$recruitment == "clin", na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.bpd.sum %>% pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.bpd.sum %>% pull(percent_women) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.bpd.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.bpd.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.bpd.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.bpd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.bpd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(n_sessions_ig) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-bpd.list = list(
-  "pooled_effects" = m.bpd$summary,
-  "variance_components" = m.bpd$model.threelevel.che.var.comp,
-  "publication_bias" = m.bpd$correctPublicationBias$summary,
-  "subgroup_analysis" = m.bpd.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(bpd.list, path="results/borderline/results.xlsx")
+dat.bpd %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/borderline/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
 
 
@@ -978,6 +464,8 @@ write_xlsx(bpd.list, path="results/borderline/results.xlsx")
 # Load data
 dat.ptsd = read.csv("data/ptsd.csv") 
 dat.ptsd$rob = ifelse(dat.ptsd$rob %in% c("Low", "Some Concerns"), 1, 0)
+dat.ptsd$format = ifelse(dat.ptsd$delivery_method == "Technology Assisted",
+                         "Guided Self-Help", dat.ptsd$format)
 
 # Run meta-analysis and correct publication bias
 m.ptsd = runMetaAnalysis(dat.ptsd, which.run = modelList,
@@ -989,6 +477,14 @@ m.ptsd = runMetaAnalysis(dat.ptsd, which.run = modelList,
 
 # Save the model & results
 save(m.ptsd, file="results/ptsd/m.ptsd.rda")
+write.xlsx(m.ptsd$summary, file = "results/ptsd/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.ptsd$model.threelevel.che.var.comp, 
+           file = "results/ptsd/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.ptsd$correctPublicationBias$summary, 
+           file = "results/ptsd/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/ptsd/profile_che_model.pdf")
@@ -1003,124 +499,28 @@ rbind(
     filterPoolingData(
       condition_arm2 %in% c("TAU")) %>% 
     runMetaAnalysis(which.run = "combined", nnt.cer = .10) %>% 
-    subgroupAnalysis(condition_arm1) %>% 
+    subgroupAnalysis(condition_arm1.lumped_category) %>% 
     {.$summary$control = "cau"; .$summary},
   dat.ptsd %>% 
     filterPoolingData(
       condition_arm2 %in% c("Waitlist")) %>% 
     runMetaAnalysis(which.run = "combined", nnt.cer = .10) %>% 
-    subgroupAnalysis(condition_arm1) %>% 
+    subgroupAnalysis(condition_arm1.lumped_category) %>% 
     {.$summary$control = "wl"; .$summary}
 ) -> m.ptsd.sg
 
+# Save the results
+write.xlsx(m.ptsd.sg, file = "results/ptsd/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.8.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.ptsd.sum = m.ptsd$model.combined$data
+#### 1.8.3 Study References ----------------------------------------------------
 
-with(dat.ptsd.sum, {cbind(n_arm1, totaln_arm1, n_randomized_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.ptsd.sum$n1
+dat.ptsd %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/ptsd/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-with(dat.ptsd.sum, {cbind(n_arm2, totaln_arm2, n_randomized_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.ptsd.sum$n2
-
-dat.ptsd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.ptsd %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.ptsd$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.ptsd$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.ptsd.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$percent_community < 1, na.rm=T),
-         perc.clin = sum(.$percent_community < 1, na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.ptsd.sum %>% 
-  pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.ptsd.sum %>% pull(female_percent) %>% as.numeric() %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.ptsd.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.ptsd.sum %>% 
-  mutate(country = recode(country, 
-    "Turkey" = "Middle East", "Iran" = "Middle East", 
-    "Oman" = "Middle East", "Saudi Arabia" = "Middle East",
-    "Jordan" = "Middle East", "The Netherlands" = "Europe",
-    "Japan" = "Asia",  "North America" = "USA",  "U.K." = "Europe",
-    "Germany" = "Europe", "Canada" = "North America", 
-    "Denmark" = "Europe", "Indonesia" = "Asia",
-    "Egypt" = "Middle East", "Sweden" = "Europe",
-    "Rwanda" = "Africa", "Mexico" = "Latin America",  "Germany, Iraq" = "Mixed",
-    "Pakistan" = "Middle East", "U.S., Canada" = "North America",
-    "U.S." = "North America",
-    "Israel" = "Middle East", "Cambodia" = "Asia", "China" = "Asia",
-    "Iraq" = "Middle East")) %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.ptsd.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.ptsd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.ptsd.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(psychotherapy_sessions_mean) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-ptsd.list = list(
-  "pooled_effects" = m.ptsd$summary,
-  "variance_components" = m.ptsd$model.threelevel.che.var.comp,
-  "publication_bias" = m.ptsd$correctPublicationBias$summary,
-  "subgroup_analysis" = m.ptsd.sg,
-  "characteristics" = characteristics %>% as.data.frame,
-  "references" = dat.ptsd.sum %>% 
-     distinct(study, .keep_all = T) %>% 
-     select(full_ref))
-
-write_xlsx(ptsd.list, path="results/ptsd/results.xlsx")
 
 
 
@@ -1129,7 +529,8 @@ write_xlsx(ptsd.list, path="results/ptsd/results.xlsx")
 #### 1.9.1 Pooled Effect -------------------------------------------------------
 
 # Load data
-dat.grief = read.csv("data/grief.csv") 
+dat.grief = read.csv("data/grief.csv") %>% 
+  filter(age_group != 1)
 
 # Run meta-analysis and correct publication bias
 m.grief = runMetaAnalysis(dat.grief, which.run = modelList,
@@ -1141,6 +542,14 @@ m.grief = runMetaAnalysis(dat.grief, which.run = modelList,
 
 # Save the model & results
 save(m.grief, file="results/grief/m.grief.rda")
+write.xlsx(m.grief$summary, file = "results/grief/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.grief$model.threelevel.che.var.comp, 
+           file = "results/grief/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.grief$correctPublicationBias$summary, 
+           file = "results/grief/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/grief/profile_che_model.pdf")
@@ -1165,99 +574,18 @@ rbind(
     {.$summary$control = "wl"; .$summary}
 ) -> m.grief.sg
 
+# Save the results
+write.xlsx(m.grief.sg, file = "results/grief/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.9.3 Study Characteristics -----------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.grief.sum = m.grief$model.combined$data
+#### 1.9.3 Study References ----------------------------------------------------
 
-with(dat.grief.sum, {cbind(n_arm1, totaln_arm1, rand_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.grief.sum$n1
+dat.grief %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/grief/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-with(dat.grief.sum, {cbind(n_arm2, totaln_arm2, rand_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.grief.sum$n2
-
-dat.grief.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
-
-# Number of studies
-dat.grief %>% {unique(.$study) %>% length()} -> k
-
-# Number of unique comparisons
-m.grief$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.grief$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-dat.grief.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(.$recr== 1, na.rm=T),
-         perc.clin = sum(.$recr== 1, na.rm=T)/nrow(.))
-  } -> recr.clin
-
-# Mean age
-dat.grief.sum %>% 
-  mutate(mean_age = parse_number(meanage, locale=locale(decimal=","))) %>% 
-  pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.grief.sum %>% pull(propwomen) %>% parse_number(loc=locale(decimal=",")) %>% 
-  ifelse(.>1, ./100, .) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.grief.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.grief.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.grief.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.grief.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-dat.grief.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(nsess_cont) %>% 
-  as.numeric() %>% 
-  {cbind(sess = mean(., na.rm = T),
-         sess.sd = sd(., na.rm = T))} -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-grief.list = list(
-  "pooled_effects" = m.grief$summary,
-  "variance_components" = m.grief$model.threelevel.che.var.comp,
-  "publication_bias" = m.grief$correctPublicationBias$summary,
-  "subgroup_analysis" = m.grief.sg,
-  "characteristics" = characteristics %>% as.data.frame)
-
-write_xlsx(grief.list, path="results/grief/results.xlsx")
 
 
 ### 1.10 Problem Gambling ------------------------------------------------------
@@ -1278,6 +606,14 @@ m.gam = runMetaAnalysis(dat.gam, which.run = modelList,
 
 # Save the model & results
 save(m.gam, file="results/gambling/m.gam.rda")
+write.xlsx(m.gam$summary, file = "results/gambling/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.gam$model.threelevel.che.var.comp, 
+           file = "results/gambling/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.gam$correctPublicationBias$summary, 
+           file = "results/gambling/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/gambling/profile_che_model.pdf")
@@ -1302,86 +638,19 @@ rbind(
     {.$summary$control = "wl"; .$summary}
 ) -> m.gam.sg
 
+# Save the results
+write.xlsx(m.gam.sg, file = "results/gambling/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.10.3 Study Characteristics ------------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.gam.sum = m.gam$model.combined$data
+#### 1.10.3 Study References ---------------------------------------------------
 
-dat.gam.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n_arm1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n_arm2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
+dat.gam %>% 
+  distinct(full_ref) %>% 
+  write.xlsx(file = "results/gambling/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-# Number of studies
-dat.gam %>% {unique(.$study) %>% length()} -> k
 
-# Number of unique comparisons
-m.gam$model.combined$k.all -> ncomp
-
-# Number of effect sizes
-m.gam$model.threelevel.che$k.all -> neffs
-
-# Recruitment type
-NA -> recr.clin
-
-# Mean age
-dat.gam.sum %>% 
-  pull(mean_age) %>% as.numeric() %>% 
-  {cbind(age.mean = mean(., na.rm = T),
-         age.sd = sd(., na.rm = T))} -> age.mean
-
-# Percentage of women
-dat.gam.sum %>% pull(percent_women) %>% 
-  {cbind(perc.women = mean(., na.rm = T),
-         perc.women.sd = sd(., na.rm = T))} -> women.prop
-
-# Type of control groups
-dat.gam.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
-
-# Countries of origin
-dat.gam.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
-
-# Low risk of bias
-dat.gam.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 3, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
-
-# Intervention format
-dat.gam.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
-
-# Number of sessions
-NA -> sessions
-
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
-
-# Save results
-gam.list = list(
-  "pooled_effects" = m.gam$summary,
-  "variance_components" = m.gam$model.threelevel.che.var.comp,
-  "publication_bias" = m.gam$correctPublicationBias$summary,
-  "subgroup_analysis" = m.gam.sg,
-  "characteristics" = characteristics %>% as.data.frame,
-  "references" = dat.dep.sum %>% 
-     distinct(study, .keep_all = T) %>% 
-     select(full_ref))
-
-write_xlsx(gam.list, path="results/gambling/results.xlsx")
 
 
 ### 1.11 Psychosis -------------------------------------------------------------
@@ -1401,6 +670,14 @@ m.psy = runMetaAnalysis(dat.psy, which.run = modelList,
 
 # Save the model & results
 save(m.psy, file="results/psychosis/m.psy.rda")
+write.xlsx(m.psy$summary, file = "results/psychosis/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.psy$model.threelevel.che.var.comp, 
+           file = "results/psychosis/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.psy$correctPublicationBias$summary, 
+           file = "results/psychosis/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/psychosis/profile_che_model.pdf")
@@ -1423,93 +700,79 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.psy.sg
 
+# Save the results
+write.xlsx(m.psy.sg, file = "results/psychosis/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-#### 1.11.3 Study Characteristics ------------------------------------------------
 
-# Number of participants (intervention, control, overall)
-dat.psy.sum = m.psy$model.combined$data
+#### 1.11.3 Study References ---------------------------------------------------
 
-with(dat.psy.sum, {cbind(n_arm1, totaln_arm1, totaln_arm1)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.psy.sum$n1
+dat.psy %>% 
+  distinct(reference) %>% 
+  write.xlsx(file = "results/psychosis/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
-with(dat.psy.sum, {cbind(n_arm2, totaln_arm2, totaln_arm2)}) %>%  
-  apply(1, max, na.rm=TRUE) %>% ifelse(. < 0, NA, .) -> dat.psy.sum$n2
 
-dat.psy.sum %>% 
-  mutate(study_ig = paste(study, condition_arm1, sep = "_"),
-         study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  { distinct(., study_ig, .keep_all = TRUE) %>% 
-      summarise(sum(n1, na.rm=T)) %>% pull(1) %>% round() ->> n1;. } %>% 
-  { distinct(., study_cg, .keep_all = TRUE) %>% 
-      summarise(sum(n2, na.rm=T)) %>% pull(1) %>% round() ->> n2 } %>% 
-  { n1 + n2 } -> n
 
-# Number of studies
-dat.psy %>% {unique(.$study) %>% length()} -> k
+### 1.12 Suicide ---------------------------------------------------------------
 
-# Number of unique comparisons
-m.psy$model.combined$k.all -> ncomp
+#### 1.12.1 Pooled Effect ------------------------------------------------------
 
-# Number of effect sizes
-m.psy$model.threelevel.che$k.all -> neffs
+# Load data
+dat.sui = read.csv("data/suicide.csv") %>% 
+  filter(age_group %in% c("adult", "yadul", "old"))
 
-# Recruitment type
-# Recruitment type
-dat.psy.sum %>% distinct(study, .keep_all = T) %>% 
-  {cbind(k.clin = sum(
-    .$recruitment %in% c("Outpatient", "Both Inpatient & Outpatient")),
-         perc.clin = sum(
-    .$recruitment %in% c("Outpatient", 
-                         "Both Inpatient & Outpatient"))/nrow(.))} -> recr.clin
+# Run meta-analysis and correct publication bias
+m.sui = runMetaAnalysis(dat.sui, which.run = modelList,
+                        which.outliers = "combined", 
+                        which.influence = "combined",
+                        which.rob = "combined", low.rob.filter = "rob == 1",
+                        nnt.cer = .18) %>% 
+  correctPublicationBias(which.run = "combined")
 
-# Mean age
-NA -> age.mean
+# Save the model & results
+save(m.sui, file="results/suicide/m.sui.rda")
+write.xlsx(m.sui$summary, file = "results/suicide/results.xlsx", 
+           sheetName = "pooled_effects")
+write.xlsx(m.sui$model.threelevel.che.var.comp, 
+           file = "results/suicide/results.xlsx", 
+           sheetName = "variance_components", append = TRUE)
+write.xlsx(m.sui$correctPublicationBias$summary, 
+           file = "results/suicide/results.xlsx", 
+           sheetName = "publication_bias", append = TRUE)
 
-# Percentage of women
-NA -> women.prop
+# Generate profile plots of the variance components
+pdf("results/suicide/profile_che_model.pdf")
+metafor::profile.rma.mv(m.sui$model.threelevel.che)
+dev.off()
 
-# Type of control groups
-dat.psy.sum %>% 
-  mutate(study_cg = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_cg, .keep_all = TRUE) %>% pull(condition_arm2) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> controls
 
-# Countries of origin
-dat.psy.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(country) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> country
+#### 1.12.2 Subgroup Analysis --------------------------------------------------
 
-# Low risk of bias
-dat.psy.sum %>% 
-  distinct(study, .keep_all = TRUE) %>% pull(rob) %>% 
-  {ifelse(. > 0, "low rob", "high rob")} %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> rob
+rbind(
+  dat.sui %>% 
+    filterPoolingData(condition_arm2 %in% c("wl", "wlc")) %>% 
+    runMetaAnalysis(which.run = "combined") %>% 
+    subgroupAnalysis(condition_arm1) %>% 
+    {.$summary$control = "wl"; .$summary},
+  dat.sui %>% 
+    filterPoolingData(condition_arm2 %in% c("cau", "ecau", "cams", "supp")) %>% 
+    runMetaAnalysis(which.run = "combined") %>% 
+    subgroupAnalysis(condition_arm1) %>% 
+    {.$summary$control = "cau"; .$summary}
+) -> m.sui.sg
 
-# Intervention format
-dat.psy.sum %>% 
-  mutate(study_ig = paste(study, condition_arm2, sep = "_")) %>% 
-  distinct(study_ig, .keep_all = TRUE) %>% pull(format) %>% 
-  {cbind(t(table(.)), t(table(.)/length(.)))} -> format
+# Save the results
+write.xlsx(m.sui.sg, file = "results/suicide/results.xlsx", 
+           sheetName = "subgroup_analysis", append = TRUE)
 
-# Number of sessions
-NA -> sessions
 
-# Combined characteristics & save
-cbind(n1, n2, n, ncomp, neffs, k, recr.clin, age.mean, women.prop, controls,
-      country, rob, format, sessions) -> characteristics
+#### 1.12.3 Study References ----------------------------------------------
 
-# Save results
-psy.list = list(
-  "pooled_effects" = m.psy$summary,
-  "variance_components" = m.psy$model.threelevel.che.var.comp,
-  "publication_bias" = m.psy$correctPublicationBias$summary,
-  "subgroup_analysis" = m.psy.sg,
-  "characteristics" = characteristics %>% as.data.frame,
-  "references" = dat.psy.sum %>% 
-     distinct(study, .keep_all = T) %>% 
-     select(reference))
-
-write_xlsx(psy.list, path="results/psychosis/results.xlsx")
+dat.sui %>% 
+  distinct(full_reference) %>% 
+  write.xlsx(file = "results/suicide/results.xlsx", 
+             sheetName = "references", append = TRUE)
 
 
 
@@ -1517,7 +780,7 @@ write_xlsx(psy.list, path="results/psychosis/results.xlsx")
 
 # Compile data
 list(m.dep, m.sad, m.pan, m.gad, m.ocd, m.pho, 
-     m.bpd, m.ptsd, m.grief, m.gam, m.psy, m.gad) %>% 
+     m.bpd, m.ptsd, m.grief, m.gam, m.psy, m.sui) %>% 
   map(resultExtractor) %>% do.call(rbind, .) %>% as.data.frame() %>% 
   mutate(.TE = as.numeric(.TE), .seTE = as.numeric(.seTE),
          Disorder = c("Depressive Disorders", "Social Anxiety Disorder", 
@@ -1531,9 +794,11 @@ list(m.dep, m.sad, m.pan, m.gad, m.ocd, m.pho,
 
 # Clean digits of prediction interval
 dat.forest[1,"pi"] = "[-0.50; 1.96]"
+dat.forest[4,"pi"] = "[-0.18; 1.90]"
+dat.forest[12,"pi"] = "[-0.52; 1.20]"
 
 # Generate plot
-png("results/plots/forest.png", width=1200, res=100)
+png("results/forest.png", res=800, width=8550, height=2800)
 meta::metagen(.TE, .seTE, data = dat.forest) %>% 
   meta::forest.meta(
     sortvar = TE, 
@@ -1547,5 +812,4 @@ meta::metagen(.TE, .seTE, data = dat.forest) %>%
     xlim = c(0.20,1.5), col.square = "dodgerblue",
     overall = FALSE, hetstat = FALSE, 
     just.addcols.left = c("center", "center", "left", "left", "center"),
-    just.addcols.right = c("left", "left"))
-dev.off()
+    just.addcols.right = c("left", "left")); dev.off()
