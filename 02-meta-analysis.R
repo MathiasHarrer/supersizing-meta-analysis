@@ -52,7 +52,6 @@ pdf("results/depression/profile_che_model.pdf")
 metafor::profile.rma.mv(m.dep$model.threelevel.che)
 dev.off()
 
-
 #### 1.1.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -72,14 +71,12 @@ rbind(
 write.xlsx(m.dep.sg, file = "results/depression/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
 
-
 #### 1.1.3 Study References ----------------------------------------------------
 
 dat.dep %>% 
   distinct(full_ref) %>% 
   write.xlsx(file = "results/depression/results.xlsx", 
              sheetName = "references", append = TRUE)
-
 
 
 
@@ -114,7 +111,6 @@ pdf("results/social_anxiety/profile_che_model.pdf")
 metafor::profile.rma.mv(m.sad$model.threelevel.che)
 dev.off()
 
-
 #### 1.2.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -140,14 +136,12 @@ rbind(
 write.xlsx(m.sad.sg, file = "results/social_anxiety/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
 
-
 #### 1.2.3 Study References ----------------------------------------------------
 
 dat.sad %>% 
   distinct(full_ref) %>% 
   write.xlsx(file = "results/social_anxiety/results.xlsx", 
              sheetName = "references", append = TRUE)
-
 
 
 
@@ -183,7 +177,6 @@ pdf("results/panic/profile_che_model.pdf")
 metafor::profile.rma.mv(m.pan$model.threelevel.che)
 dev.off()
 
-
 #### 1.3.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -202,7 +195,6 @@ rbind(
 # Save the results
 write.xlsx(m.pan.sg, file = "results/panic/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
-
 
 #### 1.3.3 Study References ----------------------------------------------------
 
@@ -245,7 +237,6 @@ pdf("results/generalized_anxiety/profile_che_model.pdf")
 metafor::profile.rma.mv(m.gad$model.threelevel.che)
 dev.off()
 
-
 #### 1.4.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -264,7 +255,6 @@ rbind(
 # Save the results
 write.xlsx(m.gad.sg, file = "results/generalized_anxiety/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
-
 
 #### 1.4.3 Study References ----------------------------------------------------
 
@@ -371,7 +361,6 @@ pdf("results/phobia/profile_che_model.pdf")
 metafor::profile.rma.mv(m.pho$model.threelevel.che)
 dev.off()
 
-
 #### 1.6.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -392,13 +381,13 @@ rbind(
 write.xlsx(m.pho.sg, file = "results/phobia/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
 
-
 #### 1.6.3 Study References ----------------------------------------------------
 
 dat.pho %>% 
   distinct(full_ref) %>% 
   write.xlsx(file = "results/phobia/results.xlsx", 
              sheetName = "references", append = TRUE)
+
 
 
 ### 1.7 Borderline Personality Disorder ----------------------------------------
@@ -431,7 +420,6 @@ write.xlsx(m.bpd$correctPublicationBias$summary,
 pdf("results/borderline/profile_che_model.pdf")
 metafor::profile.rma.mv(m.bpd$model.threelevel.che)
 dev.off()
-
 
 #### 1.7.2 Subgroup Analysis ---------------------------------------------------
 
@@ -491,7 +479,6 @@ pdf("results/ptsd/profile_che_model.pdf")
 metafor::profile.rma.mv(m.ptsd$model.threelevel.che)
 dev.off()
 
-
 #### 1.8.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -513,14 +500,12 @@ rbind(
 write.xlsx(m.ptsd.sg, file = "results/ptsd/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
 
-
 #### 1.8.3 Study References ----------------------------------------------------
 
 dat.ptsd %>% 
   distinct(full_ref) %>% 
   write.xlsx(file = "results/ptsd/results.xlsx", 
              sheetName = "references", append = TRUE)
-
 
 
 
@@ -556,7 +541,6 @@ pdf("results/grief/profile_che_model.pdf")
 metafor::profile.rma.mv(m.grief$model.threelevel.che)
 dev.off()
 
-
 #### 1.9.2 Subgroup Analysis ---------------------------------------------------
 
 rbind(
@@ -577,7 +561,6 @@ rbind(
 # Save the results
 write.xlsx(m.grief.sg, file = "results/grief/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
-
 
 #### 1.9.3 Study References ----------------------------------------------------
 
@@ -620,7 +603,6 @@ pdf("results/gambling/profile_che_model.pdf")
 metafor::profile.rma.mv(m.gam$model.threelevel.che)
 dev.off()
 
-
 #### 1.10.2 Subgroup Analysis --------------------------------------------------
 
 rbind(
@@ -642,14 +624,12 @@ rbind(
 write.xlsx(m.gam.sg, file = "results/gambling/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
 
-
 #### 1.10.3 Study References ---------------------------------------------------
 
 dat.gam %>% 
   distinct(full_ref) %>% 
   write.xlsx(file = "results/gambling/results.xlsx", 
              sheetName = "references", append = TRUE)
-
 
 
 
@@ -684,7 +664,6 @@ pdf("results/psychosis/profile_che_model.pdf")
 metafor::profile.rma.mv(m.psy$model.threelevel.che)
 dev.off()
 
-
 #### 1.11.2 Subgroup Analysis --------------------------------------------------
 
 rbind(
@@ -703,7 +682,6 @@ rbind(
 # Save the results
 write.xlsx(m.psy.sg, file = "results/psychosis/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
-
 
 #### 1.11.3 Study References ---------------------------------------------------
 
@@ -746,7 +724,6 @@ pdf("results/suicide/profile_che_model.pdf")
 metafor::profile.rma.mv(m.sui$model.threelevel.che)
 dev.off()
 
-
 #### 1.12.2 Subgroup Analysis --------------------------------------------------
 
 rbind(
@@ -765,7 +742,6 @@ rbind(
 # Save the results
 write.xlsx(m.sui.sg, file = "results/suicide/results.xlsx", 
            sheetName = "subgroup_analysis", append = TRUE)
-
 
 #### 1.12.3 Study References ----------------------------------------------
 
