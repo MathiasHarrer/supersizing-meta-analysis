@@ -11,12 +11,12 @@
 ## 0. Load dependencies and define models to be run ----------------------------
 
 library(tidyverse)
-library(xlsx)
+library(writexl)
 library(metapsyTools)
 source("utils/utils.R")
 
 modelList = c("threelevel.che", "combined", "outliers",
-              "influence", "lowest.highest", "rob")
+              "lowest.highest", "rob")
 
 
 ## 1. Meta-Analyses ------------------------------------------------------------
@@ -38,14 +38,6 @@ m.dep = runMetaAnalysis(dat.dep, which.run = modelList,
 
 # Save the model & results
 save(m.dep, file="results/depression/m.dep.rda")
-write.xlsx(m.dep$summary, file = "results/depression/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.dep$model.threelevel.che.var.comp, 
-           file = "results/depression/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.dep$correctPublicationBias$summary, 
-           file = "results/depression/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/depression/profile_che_model.pdf")
@@ -67,16 +59,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.dep.sg
 
-# Save the results
-write.xlsx(m.dep.sg, file = "results/depression/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.1.3 Save Results --------------------------------------------------------
 
-#### 1.1.3 Study References ----------------------------------------------------
-
-dat.dep %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/depression/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.dep$summary,
+                variance_components = m.dep$model.threelevel.che.var.comp,
+                publication_bias = m.dep$correctPublicationBias$summary,
+                subgroup_analysis = m.dep.sg,
+                references = dat.dep %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/depression/results.xlsx")
 
 
 
@@ -97,14 +87,6 @@ m.sad = runMetaAnalysis(dat.sad, which.run = modelList,
 
 # Save the model & results
 save(m.sad, file="results/social_anxiety/m.sad.rda")
-write.xlsx(m.sad$summary, file = "results/social_anxiety/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.sad$model.threelevel.che.var.comp, 
-           file = "results/social_anxiety/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.sad$correctPublicationBias$summary, 
-           file = "results/social_anxiety/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/social_anxiety/profile_che_model.pdf")
@@ -132,16 +114,13 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.sad.sg
 
-# Save the results
-write.xlsx(m.sad.sg, file = "results/social_anxiety/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.2.3 Save Results --------------------------------------------------------
 
-#### 1.2.3 Study References ----------------------------------------------------
-
-dat.sad %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/social_anxiety/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.sad$summary,
+                variance_components = m.sad$model.threelevel.che.var.comp,
+                publication_bias = m.sad$correctPublicationBias$summary,
+                subgroup_analysis = m.sad.sg)
+writexl::write_xlsx(res.list, path="results/social_anxiety/results.xlsx")
 
 
 
@@ -163,14 +142,6 @@ m.pan = runMetaAnalysis(dat.pan, which.run = modelList,
 
 # Save the model & results
 save(m.pan, file="results/panic/m.pan.rda")
-write.xlsx(m.pan$summary, file = "results/panic/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.pan$model.threelevel.che.var.comp, 
-           file = "results/panic/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.pan$correctPublicationBias$summary, 
-           file = "results/panic/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/panic/profile_che_model.pdf")
@@ -192,18 +163,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.pan.sg
 
-# Save the results
-write.xlsx(m.pan.sg, file = "results/panic/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.3.3 Save Results --------------------------------------------------------
 
-#### 1.3.3 Study References ----------------------------------------------------
-
-# Save full references of included studies
-dat.pan %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/panic/results.xlsx", 
-             sheetName = "references", append = TRUE)
-
+res.list = list(pooled_effects = m.pan$summary,
+                variance_components = m.pan$model.threelevel.che.var.comp,
+                publication_bias = m.pan$correctPublicationBias$summary,
+                subgroup_analysis = m.pan.sg,
+                references = dat.pan %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/panic/results.xlsx")
 
 
 ### 1.4 Generalized Anxiety Disorder -------------------------------------------
@@ -223,14 +190,6 @@ m.gad = runMetaAnalysis(dat.gad, which.run = modelList,
 
 # Save the model & results
 save(m.gad, file="results/generalized_anxiety/m.gad.rda")
-write.xlsx(m.gad$summary, file = "results/generalized_anxiety/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.gad$model.threelevel.che.var.comp, 
-           file = "results/generalized_anxiety/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.gad$correctPublicationBias$summary, 
-           file = "results/generalized_anxiety/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/generalized_anxiety/profile_che_model.pdf")
@@ -252,17 +211,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.gad.sg
 
-# Save the results
-write.xlsx(m.gad.sg, file = "results/generalized_anxiety/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.4.3 Save Results --------------------------------------------------------
 
-#### 1.4.3 Study References ----------------------------------------------------
-
-# Save full references of included studies
-dat.gad %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/generalized_anxiety/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.gad$summary,
+                variance_components = m.gad$model.threelevel.che.var.comp,
+                publication_bias = m.gad$correctPublicationBias$summary,
+                subgroup_analysis = m.gad.sg,
+                references = dat.gad %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/generalized_anxiety/results.xlsx")
 
 
 
@@ -285,14 +241,6 @@ m.ocd = runMetaAnalysis(dat.ocd, which.run = modelList,
 
 # Save the model & results
 save(m.ocd, file="results/ocd/m.ocd.rda")
-write.xlsx(m.ocd$summary, file = "results/ocd/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.ocd$model.threelevel.che.var.comp, 
-           file = "results/ocd/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.ocd$correctPublicationBias$summary, 
-           file = "results/ocd/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/ocd/profile_che_model.pdf")
@@ -316,17 +264,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.ocd.sg
 
-# Save the results
-write.xlsx(m.ocd.sg, file = "results/ocd/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.5.3 Save Results --------------------------------------------------------
 
-
-#### 1.5.3 Study References ----------------------------------------------------
-
-dat.ocd %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/ocd/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.ocd$summary,
+                variance_components = m.ocd$model.threelevel.che.var.comp,
+                publication_bias = m.ocd$correctPublicationBias$summary,
+                subgroup_analysis = m.ocd.sg,
+                references = dat.ocd %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/ocd/results.xlsx")
 
 
 
@@ -347,14 +292,6 @@ m.pho = runMetaAnalysis(dat.pho, which.run = modelList,
 
 # Save the model & results
 save(m.pho, file="results/phobia/m.pho.rda")
-write.xlsx(m.pho$summary, file = "results/phobia/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.pho$model.threelevel.che.var.comp, 
-           file = "results/phobia/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.pho$correctPublicationBias$summary, 
-           file = "results/phobia/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/phobia/profile_che_model.pdf")
@@ -377,16 +314,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.pho.sg
 
-# Save the results
-write.xlsx(m.pho.sg, file = "results/phobia/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.6.3 Save Results --------------------------------------------------------
 
-#### 1.6.3 Study References ----------------------------------------------------
-
-dat.pho %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/phobia/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.pho$summary,
+                variance_components = m.pho$model.threelevel.che.var.comp,
+                publication_bias = m.pho$correctPublicationBias$summary,
+                subgroup_analysis = m.pho.sg,
+                references = dat.pho %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/phobia/results.xlsx")
 
 
 
@@ -407,14 +342,6 @@ m.bpd = runMetaAnalysis(dat.bpd, which.run = modelList,
 
 # Save the model & results
 save(m.bpd, file="results/borderline/m.bpd.rda")
-write.xlsx(m.bpd$summary, file = "results/borderline/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.bpd$model.threelevel.che.var.comp, 
-           file = "results/borderline/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.bpd$correctPublicationBias$summary, 
-           file = "results/borderline/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/borderline/profile_che_model.pdf")
@@ -432,16 +359,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.bpd.sg
 
-# Save the results
-write.xlsx(m.bpd.sg, file = "results/borderline/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.7.3 Save Results --------------------------------------------------------
 
-#### 1.7.3 Study References ----------------------------------------------------
-
-dat.bpd %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/borderline/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.bpd$summary,
+                variance_components = m.bpd$model.threelevel.che.var.comp,
+                publication_bias = m.bpd$correctPublicationBias$summary,
+                subgroup_analysis = m.bpd.sg,
+                references = dat.bpd %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/borderline/results.xlsx")
 
 
 
@@ -465,14 +390,6 @@ m.ptsd = runMetaAnalysis(dat.ptsd, which.run = modelList,
 
 # Save the model & results
 save(m.ptsd, file="results/ptsd/m.ptsd.rda")
-write.xlsx(m.ptsd$summary, file = "results/ptsd/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.ptsd$model.threelevel.che.var.comp, 
-           file = "results/ptsd/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.ptsd$correctPublicationBias$summary, 
-           file = "results/ptsd/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/ptsd/profile_che_model.pdf")
@@ -496,16 +413,14 @@ rbind(
     {.$summary$control = "wl"; .$summary}
 ) -> m.ptsd.sg
 
-# Save the results
-write.xlsx(m.ptsd.sg, file = "results/ptsd/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.8.3 Save Results --------------------------------------------------------
 
-#### 1.8.3 Study References ----------------------------------------------------
-
-dat.ptsd %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/ptsd/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.ptsd$summary,
+                variance_components = m.ptsd$model.threelevel.che.var.comp,
+                publication_bias = m.ptsd$correctPublicationBias$summary,
+                subgroup_analysis = m.ptsd.sg,
+                references = dat.ptsd %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/ptsd/results.xlsx")
 
 
 
@@ -527,14 +442,6 @@ m.grief = runMetaAnalysis(dat.grief, which.run = modelList,
 
 # Save the model & results
 save(m.grief, file="results/grief/m.grief.rda")
-write.xlsx(m.grief$summary, file = "results/grief/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.grief$model.threelevel.che.var.comp, 
-           file = "results/grief/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.grief$correctPublicationBias$summary, 
-           file = "results/grief/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/grief/profile_che_model.pdf")
@@ -558,16 +465,14 @@ rbind(
     {.$summary$control = "wl"; .$summary}
 ) -> m.grief.sg
 
-# Save the results
-write.xlsx(m.grief.sg, file = "results/grief/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.9.3 Save Results --------------------------------------------------------
 
-#### 1.9.3 Study References ----------------------------------------------------
-
-dat.grief %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/grief/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.grief$summary,
+                variance_components = m.grief$model.threelevel.che.var.comp,
+                publication_bias = m.grief$correctPublicationBias$summary,
+                subgroup_analysis = m.grief.sg,
+                references = dat.grief %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/grief/results.xlsx")
 
 
 
@@ -589,14 +494,6 @@ m.gam = runMetaAnalysis(dat.gam, which.run = modelList,
 
 # Save the model & results
 save(m.gam, file="results/gambling/m.gam.rda")
-write.xlsx(m.gam$summary, file = "results/gambling/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.gam$model.threelevel.che.var.comp, 
-           file = "results/gambling/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.gam$correctPublicationBias$summary, 
-           file = "results/gambling/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/gambling/profile_che_model.pdf")
@@ -620,16 +517,14 @@ rbind(
     {.$summary$control = "wl"; .$summary}
 ) -> m.gam.sg
 
-# Save the results
-write.xlsx(m.gam.sg, file = "results/gambling/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.10.3 Save Results -------------------------------------------------------
 
-#### 1.10.3 Study References ---------------------------------------------------
-
-dat.gam %>% 
-  distinct(full_ref) %>% 
-  write.xlsx(file = "results/gambling/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.gam$summary,
+                variance_components = m.gam$model.threelevel.che.var.comp,
+                publication_bias = m.gam$correctPublicationBias$summary,
+                subgroup_analysis = m.gam.sg,
+                references = dat.gam %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/gambling/results.xlsx")
 
 
 
@@ -650,14 +545,6 @@ m.psy = runMetaAnalysis(dat.psy, which.run = modelList,
 
 # Save the model & results
 save(m.psy, file="results/psychosis/m.psy.rda")
-write.xlsx(m.psy$summary, file = "results/psychosis/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.psy$model.threelevel.che.var.comp, 
-           file = "results/psychosis/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.psy$correctPublicationBias$summary, 
-           file = "results/psychosis/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/psychosis/profile_che_model.pdf")
@@ -679,16 +566,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.psy.sg
 
-# Save the results
-write.xlsx(m.psy.sg, file = "results/psychosis/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.11.3 Save Results -------------------------------------------------------
 
-#### 1.11.3 Study References ---------------------------------------------------
-
-dat.psy %>% 
-  distinct(reference) %>% 
-  write.xlsx(file = "results/psychosis/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.psy$summary,
+                variance_components = m.psy$model.threelevel.che.var.comp,
+                publication_bias = m.psy$correctPublicationBias$summary,
+                subgroup_analysis = m.psy.sg,
+                references = dat.psy %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/psychosis/results.xlsx")
 
 
 
@@ -710,14 +595,6 @@ m.sui = runMetaAnalysis(dat.sui, which.run = modelList,
 
 # Save the model & results
 save(m.sui, file="results/suicide/m.sui.rda")
-write.xlsx(m.sui$summary, file = "results/suicide/results.xlsx", 
-           sheetName = "pooled_effects")
-write.xlsx(m.sui$model.threelevel.che.var.comp, 
-           file = "results/suicide/results.xlsx", 
-           sheetName = "variance_components", append = TRUE)
-write.xlsx(m.sui$correctPublicationBias$summary, 
-           file = "results/suicide/results.xlsx", 
-           sheetName = "publication_bias", append = TRUE)
 
 # Generate profile plots of the variance components
 pdf("results/suicide/profile_che_model.pdf")
@@ -739,16 +616,14 @@ rbind(
     {.$summary$control = "cau"; .$summary}
 ) -> m.sui.sg
 
-# Save the results
-write.xlsx(m.sui.sg, file = "results/suicide/results.xlsx", 
-           sheetName = "subgroup_analysis", append = TRUE)
+#### 1.12.3 Save Results -------------------------------------------------------
 
-#### 1.12.3 Study References ----------------------------------------------
-
-dat.sui %>% 
-  distinct(full_reference) %>% 
-  write.xlsx(file = "results/suicide/results.xlsx", 
-             sheetName = "references", append = TRUE)
+res.list = list(pooled_effects = m.sui$summary,
+                variance_components = m.sui$model.threelevel.che.var.comp,
+                publication_bias = m.sui$correctPublicationBias$summary,
+                subgroup_analysis = m.sui.sg,
+                references = dat.sui %>% distinct(full_ref))
+writexl::write_xlsx(res.list, path="results/suicide/results.xlsx")
 
 
 
