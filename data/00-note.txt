@@ -20,5 +20,3 @@ As of now, running code chunks that rely on these
 datasets will return an error. Until their offi-
 cial release, these two datasets are available 
 upon reasonable request. 
-
-Contact: mathias.harrer@tum.de 
