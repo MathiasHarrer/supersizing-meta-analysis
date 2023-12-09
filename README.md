@@ -48,7 +48,3 @@ This opens an R session in your environment.
 
 4. Once the setup is complete, navigate to the **"Extensions" pane** <img src="docs/img/s4.png" width="25"> in the left sidebar. There, search for and install ["REditorSupport"](https://marketplace.visualstudio.com/items?itemName=REditorSupport.r). 
 
-<br>
-
-> For questions or problems with the environment, please contact
-Mathias Harrer (mathias.harrer@tum.de).
