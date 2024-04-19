@@ -28,9 +28,7 @@ resultExtractor = function(x) {
 # makeFormula ------------------------------------------------------------------
 
 makeFormula = function(x) {
-  
   preds = names(x[x])
   f = paste("~", paste(preds, collapse = " + "))
   as.formula(f)
-  
 }
