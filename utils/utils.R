@@ -24,3 +24,13 @@ resultExtractor = function(x) {
              nsmall = 1),"%]")
   )
 }
+
+# makeFormula ------------------------------------------------------------------
+
+makeFormula = function(x) {
+  
+  preds = names(x[x])
+  f = paste("~", paste(preds, collapse = " + "))
+  as.formula(f)
+  
+}
