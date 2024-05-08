@@ -7,6 +7,7 @@ Research Domain for Psychological Treatments".
 - All datasets used to generate the analyses and plots can be found in the `data` folder.
 - The results of all analyses are saved in the `results` folder.
 - The main file used to conducted the meta-analyses is `02-meta-analysis.R` at the base of the repository.
+- The file `03-global-analysis.R` contains code for the global analysis of psychotherapy effects conducted following peer-review.
 
 <br>
 
